@@ -23,11 +23,11 @@ async fn main() {
 }
 
 async fn mock_versions(
-    Path((hostname, namespace, package_name)): Path<(String, String, String)>,
+    Path((_hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> String {
     let backend = LocalStorageBackend::new();
     return backend
-        .check_package_versions("hashicorp", PackageKind::Provider, "random")
+        .check_package_versions(&namespace, PackageKind::Provider, &package_name)
         .await
         .unwrap();
 }
