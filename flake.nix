@@ -16,7 +16,12 @@
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in with pkgs; {
         devShells.default = mkShell {
-          buildInputs = [ rust-bin.stable.latest.default pkgs.rust-analyzer ];
+          buildInputs = [
+            rust-bin.stable.latest.default
+            pkgs.rust-analyzer
+            pkgs.pkg-config
+            pkgs.libressl
+          ];
         };
         packages.default = rustPlatform.buildRustPackage {
           pname = manifest.name;
