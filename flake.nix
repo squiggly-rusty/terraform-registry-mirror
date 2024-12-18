@@ -15,8 +15,9 @@
         pkgs = import nixpkgs { inherit system overlays; };
         manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in with pkgs; {
-        devShells.default =
-          mkShell { buildInputs = [ rust-bin.stable.latest.default ]; };
+        devShells.default = mkShell {
+          buildInputs = [ rust-bin.stable.latest.default pkgs.rust-analyzer ];
+        };
         packages.default = rustPlatform.buildRustPackage {
           pname = manifest.name;
           version = manifest.version;
