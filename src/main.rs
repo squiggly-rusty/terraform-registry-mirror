@@ -23,7 +23,7 @@ async fn main() {
 }
 
 async fn mock_versions(
-    Path((hostname, namespace, package_name)): Path<(String, String, String)>,
+    Path((_hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> String {
     let backend = LocalStorageBackend::new();
     return backend
