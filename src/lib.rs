@@ -1,4 +1,4 @@
-enum PackageKind {
+pub enum PackageKind {
     Module,
     Provider,
 }
@@ -10,7 +10,7 @@ fn return_package_type(kind: PackageKind) -> String {
     }
 }
 
-trait StorageBackend {
+pub trait StorageBackend {
     fn new() -> Self;
     async fn check_package_versions(
         &self,
@@ -30,5 +30,13 @@ trait StorageBackend {
         .await?
         .text()
         .await?)
+    }
+}
+
+pub struct LocalStorageBackend;
+
+impl StorageBackend for LocalStorageBackend {
+    fn new() -> Self {
+        Self {}
     }
 }
