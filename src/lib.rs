@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 pub enum PackageKind {
     Module,
     Provider,
@@ -41,4 +43,9 @@ impl StorageBackend for LocalStorageBackend {
     fn new() -> Self {
         Self {}
     }
+}
+
+// #[derive(Serialize)]
+pub struct VersionsList {
+    versions: HashSet<()>
 }
