@@ -55,17 +55,18 @@ pub struct RegistryVersionsList {
 }
 
 #[derive(Serialize)]
+// TODO: implement custome serialize function to turn null into empty objects
 pub struct MirrorVersionsList {
-    versions: HashMap<String, ()>
+    versions: HashSet<String>
 }
 
 fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
     let mut result = MirrorVersionsList{
-        versions: HashMap::new(),
+        versions: HashSet::new(),
     };
 
     for version in &registry_versions.versions {
-        result.versions.insert(version.version.clone(), ());
+        result.versions.insert(version.version.clone());
     }
 
     return result;
