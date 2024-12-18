@@ -14,6 +14,7 @@ pub trait StorageBackend {
     fn new() -> Self;
     async fn check_package_versions(
         &self,
+        hostname: &str,
         namespace: &str,
         kind: PackageKind,
         package_name: &str,
@@ -21,7 +22,8 @@ pub trait StorageBackend {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
-                "https://registry.terraform.io/v1/{}/{}/{}/versions",
+                "https://{}/v1/{}/{}/{}/versions",
+                hostname,
                 return_package_type(kind),
                 namespace,
                 package_name
