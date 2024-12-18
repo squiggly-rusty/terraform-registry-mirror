@@ -1,4 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+
+use serde::{Deserialize, Serialize};
 
 pub enum PackageKind {
     Module,
@@ -20,7 +22,7 @@ pub trait StorageBackend {
         namespace: &str,
         kind: PackageKind,
         package_name: &str,
-    ) -> Result<String, reqwest::Error> {
+    ) -> Result<MirrorVersionsList, reqwest::Error> {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
@@ -30,10 +32,7 @@ pub trait StorageBackend {
                 namespace,
                 package_name
             )
-        ))
-        .await?
-        .text()
-        .await?)
+        )).await?.json::<RegistryVersionsList>().await.map(|res| transform_version_list(res))?)
     }
 }
 
@@ -45,7 +44,29 @@ impl StorageBackend for LocalStorageBackend {
     }
 }
 
-// #[derive(Serialize)]
-pub struct VersionsList {
-    versions: HashSet<()>
+#[derive(Deserialize)]
+pub struct RegistryVersion {
+    version: String
+}
+
+#[derive(Deserialize)]
+pub struct RegistryVersionsList {
+    versions: Vec<RegistryVersion>
+}
+
+#[derive(Serialize)]
+pub struct MirrorVersionsList {
+    versions: HashMap<String, ()>
+}
+
+fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
+    let mut result = MirrorVersionsList{
+        versions: HashMap::new(),
+    };
+
+    for version in &registry_versions.versions {
+        result.versions.insert(version.version.clone(), ());
+    }
+
+    return result;
 }
