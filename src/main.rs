@@ -12,7 +12,7 @@ async fn main() {
     // build our application with a single route
     let app = Router::new()
         .route(
-            ":hostname/:namespace/:package_name/index.json",
+            "/:hostname/:namespace/:package_name/index.json",
             get(mock_versions),
         )
         .layer(TraceLayer::new_for_http());
@@ -27,7 +27,7 @@ async fn mock_versions(
 ) -> String {
     let backend = LocalStorageBackend::new();
     return backend
-        .check_package_versions("hashicorp", PackageKind::Provider, "random")
+        .check_package_versions(&namespace, PackageKind::Provider, &package_name)
         .await
         .unwrap();
 }
