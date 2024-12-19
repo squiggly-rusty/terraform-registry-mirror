@@ -13,7 +13,7 @@ async fn main() {
     let app = Router::new()
         .route(
             "/:hostname/:namespace/:package_name/index.json",
-            get(mock_versions),
+            get(list_available_versions),
         )
         .layer(TraceLayer::new_for_http());
 
@@ -22,7 +22,7 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn mock_versions(
+async fn list_available_versions(
     Path((hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> Json<MirrorVersionsList> {
     let mut registry = RealProviderRegistry{};
