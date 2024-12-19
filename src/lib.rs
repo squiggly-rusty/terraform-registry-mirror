@@ -28,29 +28,33 @@ impl StorageBackend for LocalStorageBackend {
 
 #[derive(Deserialize)]
 pub struct RegistryVersion {
-    version: String
+    version: String,
 }
 
 #[derive(Deserialize)]
 pub struct RegistryVersionsList {
-    versions: Vec<RegistryVersion>
+    versions: Vec<RegistryVersion>,
 }
 
 #[derive(Serialize)]
 pub struct MirrorVersionsList {
-    versions: HashMap<String, MirrorVersion>
+    versions: HashMap<String, MirrorVersion>,
 }
 
 #[derive(Serialize)]
 pub struct MirrorVersion {}
 
-pub fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
-    MirrorVersionsList{
-        versions: registry_versions.versions.into_iter().map(|v| (v.version.clone(), MirrorVersion{})).collect::<HashMap<_,_>>(),
+fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
+    MirrorVersionsList {
+        versions: registry_versions
+            .versions
+            .into_iter()
+            .map(|v| (v.version.clone(), MirrorVersion {}))
+            .collect::<HashMap<_, _>>(),
     }
 }
 
-pub trait Registry {
+pub trait ProviderMirror {
     // FIXME: return type should not be limited only to reqwest::Error, but can be any error
     async fn list_versions(
         &mut self,
@@ -58,19 +62,29 @@ pub trait Registry {
         namespace: &str,
         kind: PackageKind,
         package_name: &str,
-    ) -> Result<RegistryVersionsList, reqwest::Error>;
+    ) -> Result<MirrorVersionsList, reqwest::Error>;
+
+    async fn list_installation_packages(
+        &mut self,
+        hostname: &str,
+        namespace: &str,
+        kind: PackageKind,
+        package_name: &str,
+        version: &str,
+    ) -> ();
 }
 
-pub struct RealRegistry {}
+pub struct RealProviderRegistry {}
 
-impl Registry for RealRegistry {
+impl ProviderMirror for RealProviderRegistry {
+    // FIXME: (how?) this is basically a DDoS generator
     async fn list_versions(
         &mut self,
         hostname: &str,
         namespace: &str,
         kind: PackageKind,
         package_name: &str,
-    ) -> Result<RegistryVersionsList, reqwest::Error> {
+    ) -> Result<MirrorVersionsList, reqwest::Error> {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
@@ -80,6 +94,21 @@ impl Registry for RealRegistry {
                 namespace,
                 package_name
             )
-        )).await?.json::<RegistryVersionsList>().await?)
+        ))
+        .await?
+        .json::<RegistryVersionsList>()
+        .await
+        .map(transform_version_list)?)
+    }
+
+    async fn list_installation_packages(
+        &mut self,
+        hostname: &str,
+        namespace: &str,
+        kind: PackageKind,
+        package_name: &str,
+        version: &str,
+    ) -> () {
+        todo!()
     }
 }
