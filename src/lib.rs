@@ -63,13 +63,7 @@ pub struct MirrorVersionsList {
 pub struct MirrorVersion {}
 
 fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
-    let mut result = MirrorVersionsList{
-        versions: HashMap::new(),
-    };
-
-    for version in &registry_versions.versions {
-        result.versions.insert(version.version.clone(), MirrorVersion{});
+    MirrorVersionsList{
+        versions: registry_versions.versions.into_iter().map(|v| (v.version.clone(), MirrorVersion{})).collect::<HashMap<_,_>>(),
     }
-
-    return result;
 }
