@@ -1,5 +1,7 @@
 use axum::{extract::Path, routing::get, Json, Router};
-use terraform_registry_mirror::{MirrorVersionsList, PackageKind, RealProviderRegistry, ProviderMirror};
+use terraform_registry_mirror::{
+    MirrorVersionsList, PackageKind, ProviderMirror, RealProviderRegistry,
+};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -25,7 +27,10 @@ async fn main() {
 async fn list_available_versions(
     Path((hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> Json<MirrorVersionsList> {
-    let mut registry = RealProviderRegistry{};
-    return registry.list_versions(&hostname, &namespace, PackageKind::Provider, &package_name)
-        .await.unwrap().into();
+    let mut registry = RealProviderRegistry {};
+    return registry
+        .list_versions(&hostname, &namespace, PackageKind::Provider, &package_name)
+        .await
+        .unwrap()
+        .into();
 }
