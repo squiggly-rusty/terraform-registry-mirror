@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -15,14 +15,63 @@ fn return_package_type(kind: PackageKind) -> String {
 }
 
 pub trait StorageBackend {
-    fn new() -> Self;
+    fn check_package_available(
+        &self,
+        package_kind: PackageKind,
+        namespace: &str,
+        package_name: &str,
+    ) -> Result<bool, std::io::Error>;
+    // This must likely live here, any implementation may require a different URL, but maybe not. TBD
+    fn return_package_link(
+        &self,
+        package_kind: PackageKind,
+        namespace: &str,
+        package_name: &str,
+    ) -> Result<String, std::io::Error>;
+    fn fetch_package(
+        &self,
+        package_kind: PackageKind,
+        namespace: &str,
+        package_name: &str,
+    ) -> Result<String, std::io::Error>;
 }
 
-pub struct LocalStorageBackend;
+pub struct LocalStorageBackend {
+    storage: String,
+}
+
+impl LocalStorageBackend {
+    fn new() -> Self {
+        Self {
+            storage: String::new(),
+        }
+    }
+}
 
 impl StorageBackend for LocalStorageBackend {
-    fn new() -> Self {
-        Self {}
+    fn check_package_available(
+        &self,
+        _package_kind: PackageKind,
+        _namespace: &str,
+        _package_name: &str,
+    ) -> Result<bool, std::io::Error> {
+        todo!()
+    }
+    fn return_package_link(
+        &self,
+        _package_kind: PackageKind,
+        _namespace: &str,
+        _package_name: &str,
+    ) -> Result<String, std::io::Error> {
+        todo!()
+    }
+    fn fetch_package(
+        &self,
+        _package_kind: PackageKind,
+        _namespace: &str,
+        _package_name: &str,
+    ) -> Result<String, std::io::Error> {
+        todo!()
     }
 }
 
@@ -50,7 +99,7 @@ fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVers
             .versions
             .into_iter()
             .map(|v| (v.version.clone(), MirrorVersion {}))
-            .collect::<HashMap<_, _>>(),
+            .collect::<HashMap<String, MirrorVersion>>(),
     }
 }
 
@@ -77,7 +126,8 @@ pub trait ProviderMirror {
 pub struct RealProviderRegistry {}
 
 impl ProviderMirror for RealProviderRegistry {
-    // FIXME: (how?) this is basically a DDoS generator
+    // FIXME (Andriy): (how?) this is basically a DDoS generator
+    // FIXME (Mattia): cache maybe
     async fn list_versions(
         &mut self,
         hostname: &str,
