@@ -16,24 +16,6 @@ fn return_package_type(kind: PackageKind) -> String {
 
 pub trait StorageBackend {
     fn new() -> Self;
-    async fn check_package_versions(
-        &self,
-        hostname: &str,
-        namespace: &str,
-        kind: PackageKind,
-        package_name: &str,
-    ) -> Result<MirrorVersionsList, reqwest::Error> {
-        Ok(reqwest::get(format!(
-            "{}",
-            format_args!(
-                "https://{}/v1/{}/{}/{}/versions",
-                hostname,
-                return_package_type(kind),
-                namespace,
-                package_name
-            )
-        )).await?.json::<RegistryVersionsList>().await.map(|res| transform_version_list(res))?)
-    }
 }
 
 pub struct LocalStorageBackend;
@@ -62,8 +44,42 @@ pub struct MirrorVersionsList {
 #[derive(Serialize)]
 pub struct MirrorVersion {}
 
-fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
+pub fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVersionsList {
     MirrorVersionsList{
         versions: registry_versions.versions.into_iter().map(|v| (v.version.clone(), MirrorVersion{})).collect::<HashMap<_,_>>(),
+    }
+}
+
+pub trait Registry {
+    // FIXME: return type should not be limited only to reqwest::Error, but can be any error
+    async fn list_versions(
+        &mut self,
+        hostname: &str,
+        namespace: &str,
+        kind: PackageKind,
+        package_name: &str,
+    ) -> Result<RegistryVersionsList, reqwest::Error>;
+}
+
+pub struct RealRegistry {}
+
+impl Registry for RealRegistry {
+    async fn list_versions(
+        &mut self,
+        hostname: &str,
+        namespace: &str,
+        kind: PackageKind,
+        package_name: &str,
+    ) -> Result<RegistryVersionsList, reqwest::Error> {
+        Ok(reqwest::get(format!(
+            "{}",
+            format_args!(
+                "https://{}/v1/{}/{}/{}/versions",
+                hostname,
+                return_package_type(kind),
+                namespace,
+                package_name
+            )
+        )).await?.json::<RegistryVersionsList>().await?)
     }
 }

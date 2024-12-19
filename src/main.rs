@@ -1,5 +1,5 @@
 use axum::{extract::Path, routing::get, Json, Router};
-use terraform_registry_mirror::{LocalStorageBackend, MirrorVersionsList, PackageKind, StorageBackend};
+use terraform_registry_mirror::{transform_version_list, LocalStorageBackend, MirrorVersionsList, PackageKind, RealRegistry, Registry, StorageBackend};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -25,9 +25,7 @@ async fn main() {
 async fn mock_versions(
     Path((hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> Json<MirrorVersionsList> {
-    let backend = LocalStorageBackend::new();
-    return backend
-        .check_package_versions(&hostname, &namespace, PackageKind::Provider, &package_name)
-        .await
-        .unwrap().into();
+    let mut registry = RealRegistry{};
+    return registry.list_versions(&hostname, &namespace, PackageKind::Provider, &package_name)
+        .await.map(transform_version_list).unwrap().into();
 }
