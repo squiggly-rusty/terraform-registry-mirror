@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use axum::response::Redirect;
 use serde::{Deserialize, Serialize};
 
 pub enum PackageKind {
@@ -211,17 +212,4 @@ fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> A
     }
 
     return AvailablePackages { archives };
-}
-
-#[derive(Serialize)]
-#[serde(untagged)] // NOTE: we want untagged here, because enum is just for storing multiple types and is not a part of an expected response
-pub enum ListOrDownloadResponse {
-    AvailablePackages(AvailablePackages),
-    DownloadLinkRedirect,
-}
-
-impl From<AvailablePackages> for ListOrDownloadResponse {
-    fn from(value: AvailablePackages) -> Self {
-        Self::AvailablePackages(value)
-    }
 }

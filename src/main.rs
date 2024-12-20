@@ -1,7 +1,11 @@
-use axum::{extract::Path, routing::get, Json, Router};
+use axum::{
+    extract::Path,
+    response::{IntoResponse, Response},
+    routing::get,
+    Json, Router,
+};
 use terraform_registry_mirror::{
-    AvailablePackages, ListOrDownloadResponse, MirrorVersionsList, PackageKind, ProviderMirror,
-    RealProviderRegistry,
+    MirrorVersionsList, PackageKind, ProviderMirror, RealProviderRegistry,
 };
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -47,11 +51,11 @@ async fn handle_list_or_download(
         String,
         String,
     )>,
-) -> Json<ListOrDownloadResponse> {
+) -> Response {
     let mut registry = RealProviderRegistry {};
 
     if let Some(version) = version_or_path_part.strip_suffix(".json") {
-        return ListOrDownloadResponse::from(
+        return Json(
             registry
                 .list_installation_packages(
                     &hostname,
@@ -63,7 +67,7 @@ async fn handle_list_or_download(
                 .await
                 .unwrap(),
         )
-        .into();
+        .into_response();
     } else if let Some(download_url) = version_or_path_part.strip_suffix(".zip") {
         // TODO: for the inital case, this should be a temporary redirect to original location, see: https://docs.rs/axum/latest/axum/response/struct.Redirect.html
         todo!()
