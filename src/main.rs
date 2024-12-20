@@ -16,14 +16,14 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // build our application with a single route
     let app = Router::new()
         .route(
             "/:hostname/:namespace/:package_name/index.json",
             get(list_available_versions),
         )
         .route(
-            "/:hostname/:namespace/:package_name/:version",
+            // NOTE: i couldn't find a way to match on :version.json, as it still grabbed everything. so if it's possible to split into two separate handlers it would be the best.
+            "/:hostname/:namespace/:package_name/:version_or_path_part",
             get(handle_list_or_download),
         )
         .layer(TraceLayer::new_for_http());
