@@ -211,7 +211,7 @@ impl ProviderMirror for RealProviderRegistry {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
-                "https://{}/v1/versions/{}/{}/versions",
+                "https://{}/v1/providers/{}/{}/versions",
                 package.hostname, package.namespace, package.name,
             )
         ))
