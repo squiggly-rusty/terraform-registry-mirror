@@ -75,12 +75,19 @@ impl StorageBackend for LocalStorageBackend {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct RegistryVersion {
     version: String,
+    platforms: Vec<PlatformArchPair>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+pub struct PlatformArchPair {
+    os: String,
+    arch: String,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct RegistryVersionsList {
     versions: Vec<RegistryVersion>,
 }
@@ -120,7 +127,7 @@ pub trait ProviderMirror {
         kind: PackageKind,
         package_name: &str,
         version: &str,
-    ) -> ();
+    ) -> Result<AvailablePackages, reqwest::Error>;
 }
 
 pub struct RealProviderRegistry {}
@@ -158,7 +165,62 @@ impl ProviderMirror for RealProviderRegistry {
         kind: PackageKind,
         package_name: &str,
         version: &str,
-    ) -> () {
-        todo!()
+    ) -> Result<AvailablePackages, reqwest::Error> {
+        Ok(reqwest::get(format!(
+            "{}",
+            format_args!(
+                "https://{}/v1/{}/{}/{}/versions",
+                hostname,
+                return_package_type(kind),
+                namespace,
+                package_name
+            )
+        ))
+        .await?
+        .json::<RegistryVersionsList>()
+        .await
+        .map(|rvl| generate_installation_packages(rvl, version))?)
+    }
+}
+
+#[derive(Serialize)]
+pub struct AvailablePackages {
+    archives: HashMap<String, Archive>,
+}
+
+#[derive(Serialize)]
+pub struct Archive {
+    url: String,
+}
+
+fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> AvailablePackages {
+    let matching_version = rvl
+        .versions
+        .into_iter()
+        .find(|v| v.version == version)
+        .unwrap();
+
+    let mut archives = HashMap::new();
+
+    for pair in matching_version.platforms {
+        let key = format!("{}_{}", pair.os, pair.arch);
+        let value = Archive {
+            url: format!("{}_{}_{}.zip", version, pair.os, pair.arch),
+        };
+        archives.insert(key, value);
+    }
+
+    return AvailablePackages { archives };
+}
+
+#[derive(Serialize)]
+pub enum ListOrDownloadResponse {
+    AvailablePackages(AvailablePackages),
+    DownloadLinkRedirect,
+}
+
+impl From<AvailablePackages> for ListOrDownloadResponse {
+    fn from(value: AvailablePackages) -> Self {
+        Self::AvailablePackages(value)
     }
 }
