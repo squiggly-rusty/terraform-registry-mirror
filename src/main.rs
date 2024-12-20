@@ -68,6 +68,7 @@ async fn handle_list_or_download(
         // TODO: for the inital case, this should be a temporary redirect to original location, see: https://docs.rs/axum/latest/axum/response/struct.Redirect.html
         todo!()
     } else {
-        panic!("unhandled case!")
+        // TODO: this should be a proper error returned
+        panic!("unsupported extension!")
     }
 }
