@@ -1,6 +1,6 @@
 #+title: Scheme
 
-* v0.0.1
+* v0.0.1 (done)
 1. Client makes a request to ~list_available_versions~. ([[https://developer.hashicorp.com/terraform/internals/provider-network-mirror-protocol#list-available-versions][upstream docs]])
    1. Make a request upstream and fetch missing information.
 2. Client makes a request to ~list_available_installation_packages~. ([[https://developer.hashicorp.com/terraform/internals/provider-network-mirror-protocol#list-available-installation-packages][upstream docs]])
