@@ -67,7 +67,7 @@ async fn list_available_versions(
 }
 
 async fn list_available_installation_packages(
-    Path((hostname, namespace, package_name, version_or_path_part)): Path<(
+    Path((hostname, namespace, package_name, version_part)): Path<(
         String,
         String,
         String,
@@ -76,7 +76,7 @@ async fn list_available_installation_packages(
 ) -> Response {
     let mut registry = RealProviderRegistry {};
 
-    if let Some(version) = version_or_path_part.strip_suffix(".json") {
+    if let Some(version) = version_part.strip_suffix(".json") {
         return Json(
             registry
                 .list_installation_packages(
