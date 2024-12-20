@@ -210,10 +210,46 @@ fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> A
         let value = Archive {
             // NOTE: this url is what later be used/passed into the download handler again so we MUST have (at leasst) the version part here!
             // and everything else can be reconstructed back from the full url path: registry, namespace, package_name.
-            url: format!("{}_{}_{}.zip", version, pair.os, pair.arch),
+            url: format!("{}/download/{}/{}", version, pair.os, pair.arch),
         };
         archives.insert(key, value);
     }
 
     return AvailablePackages { archives };
+}
+
+#[derive(Deserialize)]
+pub struct DownloadMetadata {
+    download_url: String,
+}
+
+pub async fn redirect_to_real_download(
+    hostname: &str,
+    namespace: &str,
+    package_name: &str,
+    version: &str,
+    os: &str,
+    arch: &str,
+) -> Result<Redirect, reqwest::Error> {
+    Ok(reqwest::get(format!(
+        "{}",
+        format_args!(
+            "https://{}/v1/{}/{}/{}/{}/download/{}/{}",
+            hostname,
+            return_package_type(PackageKind::Provider),
+            namespace,
+            package_name,
+            version,
+            os,
+            arch
+        )
+    ))
+    .await?
+    .json::<DownloadMetadata>()
+    .await
+    .map(construct_redirect)?)
+}
+
+fn construct_redirect(metadata: DownloadMetadata) -> Redirect {
+    Redirect::temporary(&metadata.download_url)
 }

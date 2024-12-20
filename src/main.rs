@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use terraform_registry_mirror::{
-    MirrorVersionsList, PackageKind, ProviderMirror, RealProviderRegistry,
+    redirect_to_real_download, MirrorVersionsList, PackageKind, ProviderMirror, RealProviderRegistry
 };
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -23,8 +23,12 @@ async fn main() {
         )
         .route(
             // NOTE: i couldn't find a way to match on :version.json, as it still grabbed everything. so if it's possible to split into two separate handlers it would be the best.
-            "/:hostname/:namespace/:package_name/:version_or_path_part",
+            "/:hostname/:namespace/:package_name/:version.json",
             get(handle_list_or_download),
+        )
+        .route(
+            "/:hostname/:namespace/:package_name/:version/download/:os/:arch",
+            get(handle_download),
         )
         .layer(TraceLayer::new_for_http());
 
@@ -75,4 +79,17 @@ async fn handle_list_or_download(
         // TODO: this should be a proper error returned
         panic!("unsupported extension!")
     }
+}
+
+async fn handle_download(
+    Path((hostname, namespace, package_name, version, os, arch)): Path<(
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    )>,
+) -> Response {
+    redirect_to_real_download(&hostname, &namespace, &package_name, &version, &os, &arch).await.unwrap().into_response()
 }
