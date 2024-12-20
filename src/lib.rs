@@ -194,6 +194,8 @@ pub struct Archive {
     url: String,
 }
 
+// TODO: this can be functionalized more.
+// TODO: this assumes we always find a matching version. ideally, this should return Option<> instead.
 fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> AvailablePackages {
     let matching_version = rvl
         .versions
