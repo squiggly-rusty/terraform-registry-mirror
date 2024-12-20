@@ -8,8 +8,8 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use terraform_registry_mirror::{
-    redirect_to_real_download, MirrorVersionsList, PackageKind, ProviderMirror,
-    RealProviderRegistry,
+    redirect_to_real_download, MirrorVersionsList, ProviderMirror, ProviderPackage,
+    ProviderPackageVersion, RealProviderRegistry,
 };
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -58,34 +58,21 @@ async fn main() {
 async fn list_available_versions(
     Path((hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> Json<MirrorVersionsList> {
-    let mut registry = RealProviderRegistry {};
-    return registry
-        .list_versions(&hostname, &namespace, PackageKind::Provider, &package_name)
-        .await
-        .unwrap()
-        .into();
+    let registry = RealProviderRegistry {};
+    let package = ProviderPackage::new(&hostname, &namespace, &package_name);
+    return registry.list_versions(&package).await.unwrap().into();
 }
 
 async fn list_available_installation_packages(
-    Path((hostname, namespace, package_name, version_part)): Path<(
-        String,
-        String,
-        String,
-        String,
-    )>,
+    Path((hostname, namespace, package_name, version_part)): Path<(String, String, String, String)>,
 ) -> Response {
-    let mut registry = RealProviderRegistry {};
+    let registry = RealProviderRegistry {};
 
     if let Some(version) = version_part.strip_suffix(".json") {
+        let package = ProviderPackage::new(&hostname, &namespace, &package_name);
         return Json(
             registry
-                .list_installation_packages(
-                    &hostname,
-                    &namespace,
-                    PackageKind::Provider,
-                    &package_name,
-                    version,
-                )
+                .list_installation_packages(&package, version)
                 .await
                 .unwrap(),
         )
@@ -107,7 +94,9 @@ async fn download_package(
     )>,
 ) -> Response {
     // TODO: this can be the place to fire off the download and then check on the next received request if we already have the file
-    redirect_to_real_download(&hostname, &namespace, &package_name, &version, &os, &arch)
+    let version = ProviderPackageVersion::new(version, os, arch);
+    let package = ProviderPackage::with_version(&hostname, &namespace, &package_name, version);
+    redirect_to_real_download(&package)
         .await
         .unwrap()
         .into_response()

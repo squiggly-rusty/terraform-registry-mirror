@@ -15,6 +15,63 @@ fn return_package_type(kind: PackageKind) -> String {
     }
 }
 
+#[derive(Clone)]
+pub struct ProviderPackageVersion {
+    num: String,
+    os: String,
+    arch: String,
+}
+
+impl ProviderPackageVersion {
+    pub fn new(num: String, os: String, arch: String) -> Self {
+        Self { num, os, arch }
+    }
+}
+
+pub struct ProviderPackage {
+    pub hostname: String,
+    pub namespace: String,
+    pub name: String,
+    version: Option<ProviderPackageVersion>,
+}
+
+impl ProviderPackage {
+    pub fn new(hostname: &str, namespace: &str, name: &str) -> Self {
+        Self {
+            hostname: hostname.to_string(),
+            namespace: namespace.to_string(),
+            name: name.to_string(),
+            version: None,
+        }
+    }
+
+    pub fn with_version(
+        hostname: &str,
+        namespace: &str,
+        name: &str,
+        version: ProviderPackageVersion,
+    ) -> Self {
+        Self {
+            hostname: hostname.to_string(),
+            namespace: namespace.to_string(),
+            name: name.to_string(),
+            version: Some(version),
+        }
+    }
+
+    pub fn arch(&self) -> String {
+        self.version.clone().unwrap().arch.to_string()
+    }
+
+    pub fn os(&self) -> String {
+        self.version.clone().unwrap().os.to_string()
+    }
+
+    pub fn version(&self) -> String {
+        self.version.clone().unwrap().num.to_string()
+    }
+}
+
 pub trait StorageBackend {
     fn check_package_available(
         &self,
@@ -114,19 +171,12 @@ fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVers
 pub trait ProviderMirror {
     // FIXME: return type should not be limited only to reqwest::Error, but can be any error
     async fn list_versions(
-        &mut self,
-        hostname: &str,
-        namespace: &str,
-        kind: PackageKind,
-        package_name: &str,
+        &self,
+        package: &ProviderPackage,
     ) -> Result<MirrorVersionsList, reqwest::Error>;
-
     async fn list_installation_packages(
-        &mut self,
-        hostname: &str,
-        namespace: &str,
-        kind: PackageKind,
-        package_name: &str,
+        &self,
+        package: &ProviderPackage,
         version: &str,
     ) -> Result<AvailablePackages, reqwest::Error>;
 }
@@ -137,20 +187,14 @@ impl ProviderMirror for RealProviderRegistry {
     // FIXME (Andriy): (how?) this is basically a DDoS generator
     // FIXME (Mattia): cache maybe
     async fn list_versions(
-        &mut self,
-        hostname: &str,
-        namespace: &str,
-        kind: PackageKind,
-        package_name: &str,
+        &self,
+        package: &ProviderPackage,
     ) -> Result<MirrorVersionsList, reqwest::Error> {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
-                "https://{}/v1/{}/{}/{}/versions",
-                hostname,
-                return_package_type(kind),
-                namespace,
-                package_name
+                "https://{}/v1/providers/{}/{}/versions",
+                package.hostname, package.namespace, package.name
             )
         ))
         .await?
@@ -160,21 +204,15 @@ impl ProviderMirror for RealProviderRegistry {
     }
 
     async fn list_installation_packages(
-        &mut self,
-        hostname: &str,
-        namespace: &str,
-        kind: PackageKind,
-        package_name: &str,
+        &self,
+        package: &ProviderPackage,
         version: &str,
     ) -> Result<AvailablePackages, reqwest::Error> {
         Ok(reqwest::get(format!(
             "{}",
             format_args!(
-                "https://{}/v1/{}/{}/{}/versions",
-                hostname,
-                return_package_type(kind),
-                namespace,
-                package_name
+                "https://{}/v1/versions/{}/{}/versions",
+                package.hostname, package.namespace, package.name,
             )
         ))
         .await?
@@ -224,24 +262,18 @@ pub struct DownloadMetadata {
 }
 
 pub async fn redirect_to_real_download(
-    hostname: &str,
-    namespace: &str,
-    package_name: &str,
-    version: &str,
-    os: &str,
-    arch: &str,
+    package: &ProviderPackage,
 ) -> Result<Redirect, reqwest::Error> {
     Ok(reqwest::get(format!(
         "{}",
         format_args!(
-            "https://{}/v1/{}/{}/{}/{}/download/{}/{}",
-            hostname,
-            return_package_type(PackageKind::Provider),
-            namespace,
-            package_name,
-            version,
-            os,
-            arch
+            "https://{}/v1/providers/{}/{}/{}/download/{}/{}",
+            package.hostname,
+            package.namespace,
+            package.name,
+            package.version(),
+            package.os(),
+            package.arch()
         )
     ))
     .await?
