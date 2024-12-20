@@ -208,6 +208,8 @@ fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> A
     for pair in matching_version.platforms {
         let key = format!("{}_{}", pair.os, pair.arch);
         let value = Archive {
+            // NOTE: this url is what later be used/passed into the download handler again so we MUST have (at leasst) the version part here!
+            // and everything else can be reconstructed back from the full url path: registry, namespace, package_name.
             url: format!("{}_{}_{}.zip", version, pair.os, pair.arch),
         };
         archives.insert(key, value);
