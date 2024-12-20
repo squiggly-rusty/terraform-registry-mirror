@@ -1,11 +1,15 @@
+use std::{net::SocketAddr, path::PathBuf};
+
 use axum::{
     extract::Path,
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
 };
+use axum_server::tls_rustls::RustlsConfig;
 use terraform_registry_mirror::{
-    redirect_to_real_download, MirrorVersionsList, PackageKind, ProviderMirror, RealProviderRegistry
+    redirect_to_real_download, MirrorVersionsList, PackageKind, ProviderMirror,
+    RealProviderRegistry,
 };
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -16,25 +20,39 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // configure certificate and private key used by https
+    let from_pem_file = RustlsConfig::from_pem_file(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("certs")
+            .join("localhost")
+            .join("cert.pem"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("certs")
+            .join("localhost")
+            .join("key.pem"),
+    );
+    let config = from_pem_file.await.unwrap();
+
     let app = Router::new()
         .route(
             "/:hostname/:namespace/:package_name/index.json",
             get(list_available_versions),
         )
         .route(
-            // NOTE: i couldn't find a way to match on :version.json, as it still grabbed everything. so if it's possible to split into two separate handlers it would be the best.
             "/:hostname/:namespace/:package_name/:version.json",
-            get(handle_list_or_download),
+            get(list_available_installation_packages),
         )
         .route(
             "/:hostname/:namespace/:package_name/:version/download/:os/:arch",
-            get(handle_download),
+            get(download_package),
         )
         .layer(TraceLayer::new_for_http());
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    axum_server::bind_rustls(addr, config)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
 
 async fn list_available_versions(
@@ -48,7 +66,7 @@ async fn list_available_versions(
         .into();
 }
 
-async fn handle_list_or_download(
+async fn list_available_installation_packages(
     Path((hostname, namespace, package_name, version_or_path_part)): Path<(
         String,
         String,
@@ -72,16 +90,13 @@ async fn handle_list_or_download(
                 .unwrap(),
         )
         .into_response();
-    } else if let Some(download_url) = version_or_path_part.strip_suffix(".zip") {
-        // TODO: for the inital case, this should be a temporary redirect to original location, see: https://docs.rs/axum/latest/axum/response/struct.Redirect.html
-        todo!()
     } else {
         // TODO: this should be a proper error returned
         panic!("unsupported extension!")
     }
 }
 
-async fn handle_download(
+async fn download_package(
     Path((hostname, namespace, package_name, version, os, arch)): Path<(
         String,
         String,
@@ -91,5 +106,9 @@ async fn handle_download(
         String,
     )>,
 ) -> Response {
-    redirect_to_real_download(&hostname, &namespace, &package_name, &version, &os, &arch).await.unwrap().into_response()
+    // TODO: this can be the place to fire off the download and then check on the next received request if we already have the file
+    redirect_to_real_download(&hostname, &namespace, &package_name, &version, &os, &arch)
+        .await
+        .unwrap()
+        .into_response()
 }
