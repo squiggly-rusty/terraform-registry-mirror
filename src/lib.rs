@@ -214,7 +214,7 @@ fn generate_installation_packages(rvl: RegistryVersionsList, version: &str) -> A
 }
 
 #[derive(Serialize)]
-#[serde(untagged)]  // NOTE: we want untagged here, because enum is just for storing multiple types and is not a part of an expected response
+#[serde(untagged)] // NOTE: we want untagged here, because enum is just for storing multiple types and is not a part of an expected response
 pub enum ListOrDownloadResponse {
     AvailablePackages(AvailablePackages),
     DownloadLinkRedirect,
