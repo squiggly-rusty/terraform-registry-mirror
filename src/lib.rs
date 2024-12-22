@@ -18,7 +18,7 @@ fn return_package_type(kind: PackageKind) -> String {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProviderPackageVersion {
     num: String,
     os: String,
@@ -31,7 +31,7 @@ impl ProviderPackageVersion {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProviderPackage {
     pub hostname: String,
     pub namespace: String,
