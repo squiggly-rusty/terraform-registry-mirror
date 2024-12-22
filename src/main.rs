@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf};
 
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     response::{IntoResponse, Redirect, Response},
     routing::get,
     Json, Router,
@@ -12,6 +12,12 @@ use terraform_registry_mirror::{
     ProviderPackage, ProviderPackageVersion, RealProviderRegistry, StorageBackend,
 };
 use tower_http::trace::TraceLayer;
+use tracing::info;
+
+#[derive(Clone)]
+struct AppState {
+    storage_backend: LocalStorageBackend,
+}
 
 #[tokio::main]
 async fn main() {
@@ -32,6 +38,9 @@ async fn main() {
     );
     let config = from_pem_file.await.unwrap();
 
+    let state = AppState {
+        storage_backend: LocalStorageBackend::new(),
+    };
     let app = Router::new()
         .route(
             "/:hostname/:namespace/:package_name/index.json",
@@ -45,6 +54,7 @@ async fn main() {
             "/:hostname/:namespace/:package_name/:version/download/:os/:arch",
             get(download_package),
         )
+        .with_state(state)
         .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -83,6 +93,7 @@ async fn list_available_installation_packages(
 }
 
 async fn download_package(
+    State(state): State<AppState>,
     Path((hostname, namespace, package_name, version, os, arch)): Path<(
         String,
         String,
@@ -96,12 +107,13 @@ async fn download_package(
     let version = ProviderPackageVersion::new(version, os, arch);
     let package = ProviderPackage::with_version(&hostname, &namespace, &package_name, version);
 
-    let backend = LocalStorageBackend::new();
-
-    if let Some(uri) = backend.return_package_link(package.clone()) {
+    info!("in download_package!");
+    if let Some(uri) = state.storage_backend.return_package_link(package.clone()) {
+        info!("package available, returning link from storage!");
         // TODO: or we can return back a file or start streaming here
         Redirect::temporary(&uri).into_response()
     } else {
+        info!("package not available, returning real download link!");
         redirect_to_real_download(&package)
             .await
             .unwrap()

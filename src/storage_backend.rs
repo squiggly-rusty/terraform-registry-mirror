@@ -7,6 +7,7 @@ pub trait StorageBackend {
     fn fetch_package(&self, package: ProviderPackage) -> Result<String, std::io::Error>;
 }
 
+#[derive(Clone)]
 pub struct LocalStorageBackend {
     storage: String,
 }
