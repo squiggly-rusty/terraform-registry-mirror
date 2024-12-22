@@ -31,7 +31,6 @@ impl LocalStorageBackend {
 }
 
 impl StorageBackend for LocalStorageBackend {
-    // FIXME: this cannot find packages after they've been updates
     fn check_package_available(&self, package: &ProviderPackage) -> bool {
         self.packages_status
             .get(package)
@@ -51,6 +50,7 @@ impl StorageBackend for LocalStorageBackend {
         let r = self.packages_status.clone();
         let pc = package.clone();
         tokio::spawn(async move{
+            r.insert(pc.clone(), PackageStatus::Downloading);
             info!("fetching package {:?}...", pc);
             tokio::time::sleep(Duration::from_secs(5)).await;
             r.alter(&pc, |_,_| PackageStatus::Ready("".to_string()));
