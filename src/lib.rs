@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use axum::response::Redirect;
 use serde::{Deserialize, Serialize};
 
+mod storage_backend;
+
 pub enum PackageKind {
     Module,
     Provider,
@@ -72,66 +74,6 @@ impl ProviderPackage {
     }
 }
 
-pub trait StorageBackend {
-    fn check_package_available(
-        &self,
-        package_kind: PackageKind,
-        namespace: &str,
-        package_name: &str,
-    ) -> Result<bool, std::io::Error>;
-    // This must likely live here, any implementation may require a different URL, but maybe not. TBD
-    fn return_package_link(
-        &self,
-        package_kind: PackageKind,
-        namespace: &str,
-        package_name: &str,
-    ) -> Result<String, std::io::Error>;
-    fn fetch_package(
-        &self,
-        package_kind: PackageKind,
-        namespace: &str,
-        package_name: &str,
-    ) -> Result<String, std::io::Error>;
-}
-
-pub struct LocalStorageBackend {
-    storage: String,
-}
-
-impl LocalStorageBackend {
-    fn new() -> Self {
-        Self {
-            storage: String::new(),
-        }
-    }
-}
-
-impl StorageBackend for LocalStorageBackend {
-    fn check_package_available(
-        &self,
-        _package_kind: PackageKind,
-        _namespace: &str,
-        _package_name: &str,
-    ) -> Result<bool, std::io::Error> {
-        todo!()
-    }
-    fn return_package_link(
-        &self,
-        _package_kind: PackageKind,
-        _namespace: &str,
-        _package_name: &str,
-    ) -> Result<String, std::io::Error> {
-        todo!()
-    }
-    fn fetch_package(
-        &self,
-        _package_kind: PackageKind,
-        _namespace: &str,
-        _package_name: &str,
-    ) -> Result<String, std::io::Error> {
-        todo!()
-    }
-}
 
 #[derive(Deserialize, Debug)]
 pub struct RegistryVersion {
