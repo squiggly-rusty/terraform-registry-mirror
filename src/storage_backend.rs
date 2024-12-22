@@ -1,4 +1,7 @@
+use std::{sync::Arc, time::Duration};
+
 use dashmap::DashMap;
+use tracing::info;
 
 use crate::ProviderPackage;
 
@@ -6,7 +9,7 @@ pub trait StorageBackend {
     fn check_package_available(&self, package: &ProviderPackage) -> bool;
     // This must likely live here, any implementation may require a different URL, but maybe not. TBD
     fn return_package_link(&self, package: &ProviderPackage) -> Option<String>;
-    fn fetch_package(&self, package: &ProviderPackage) -> Result<String, std::io::Error>;
+    fn fetch_package(&self, package: &ProviderPackage);
 }
 
 enum PackageStatus {
@@ -14,23 +17,25 @@ enum PackageStatus {
     Ready(String),
 }
 
+#[derive(Clone)]
 pub struct LocalStorageBackend {
-    packages_status: DashMap<ProviderPackage, PackageStatus>,
+    packages_status: Arc<DashMap<ProviderPackage, PackageStatus>>,
 }
 
 impl LocalStorageBackend {
     pub fn new() -> Self {
         Self {
-            packages_status: DashMap::new(),
+            packages_status: DashMap::new().into(),
         }
     }
 }
 
 impl StorageBackend for LocalStorageBackend {
+    // FIXME: this cannot find packages after they've been updates
     fn check_package_available(&self, package: &ProviderPackage) -> bool {
         self.packages_status
-            .get(&package)
-            .filter(|status| matches!(**status, PackageStatus::Ready { .. }))
+            .get(package)
+            .filter(|status| matches!(**status, PackageStatus::Ready(_)))
             .is_some()
     }
     fn return_package_link(&self, package: &ProviderPackage) -> Option<String> {
@@ -42,9 +47,14 @@ impl StorageBackend for LocalStorageBackend {
         }
     }
     fn fetch_package(&self, package: &ProviderPackage) {
-        // self.packages_status
-        //     .insert(package.clone(), PackageStatus::Downloading);
-        // TODO: do scary async stuff here
-        tokio::spawn(async {});
+        // NOTE: this is ugly, is there any way to avoid this?
+        let r = self.packages_status.clone();
+        let pc = package.clone();
+        tokio::spawn(async move{
+            info!("fetching package {:?}...", pc);
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            r.alter(&pc, |_,_| PackageStatus::Ready("".to_string()));
+            info!("fetched package {:?}!", pc);
+        });
     }
 }
