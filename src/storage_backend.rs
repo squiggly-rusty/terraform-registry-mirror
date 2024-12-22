@@ -39,7 +39,7 @@ impl StorageBackend for LocalStorageBackend {
     }
     fn return_package_link(&self, package: &ProviderPackage) -> Option<String> {
         if self.check_package_available(package) {
-            if let PackageStatus::Ready(uri) =  &(*self.packages_status.get(package).unwrap()) {
+            if let PackageStatus::Ready(uri) = &(*self.packages_status.get(package).unwrap()) {
                 Some(uri.clone())
             } else {
                 None
@@ -53,11 +53,11 @@ impl StorageBackend for LocalStorageBackend {
         // NOTE: this is ugly, is there any way to avoid this?
         let r = self.packages_status.clone();
         let pc = package.clone();
-        tokio::spawn(async move{
+        tokio::spawn(async move {
             r.insert(pc.clone(), PackageStatus::Downloading);
             info!("fetching package...");
             tokio::time::sleep(Duration::from_secs(5)).await;
-            r.alter(&pc, |_,_| PackageStatus::Ready("".to_string()));
+            r.alter(&pc, |_, _| PackageStatus::Ready("".to_string()));
             info!("fetched package!");
         });
     }
