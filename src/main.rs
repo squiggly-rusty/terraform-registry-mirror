@@ -16,7 +16,7 @@ use tower_http::trace::TraceLayer;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .init();
 
     // configure certificate and private key used by https
