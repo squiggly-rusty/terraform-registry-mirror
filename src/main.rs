@@ -2,20 +2,22 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use axum::{
     extract::Path,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     Json, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
 use terraform_registry_mirror::{
-    redirect_to_real_download, MirrorVersionsList, ProviderMirror, ProviderPackage,
-    ProviderPackageVersion, RealProviderRegistry,
+    redirect_to_real_download, LocalStorageBackend, MirrorVersionsList, ProviderMirror,
+    ProviderPackage, ProviderPackageVersion, RealProviderRegistry, StorageBackend,
 };
 use tower_http::trace::TraceLayer;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 
     // configure certificate and private key used by https
     let from_pem_file = RustlsConfig::from_pem_file(
@@ -93,8 +95,16 @@ async fn download_package(
     // TODO: this can be the place to fire off the download and then check on the next received request if we already have the file
     let version = ProviderPackageVersion::new(version, os, arch);
     let package = ProviderPackage::with_version(&hostname, &namespace, &package_name, version);
-    redirect_to_real_download(&package)
-        .await
-        .unwrap()
-        .into_response()
+
+    let backend = LocalStorageBackend::new();
+
+    if let Some(uri) = backend.return_package_link(package.clone()) {
+        // TODO: or we can return back a file or start streaming here
+        Redirect::temporary(&uri).into_response()
+    } else {
+        redirect_to_real_download(&package)
+            .await
+            .unwrap()
+            .into_response()
+    }
 }

@@ -4,6 +4,7 @@ use axum::response::Redirect;
 use serde::{Deserialize, Serialize};
 
 mod storage_backend;
+pub use storage_backend::{LocalStorageBackend, StorageBackend};
 
 pub enum PackageKind {
     Module,
@@ -30,6 +31,7 @@ impl ProviderPackageVersion {
     }
 }
 
+#[derive(Clone)]
 pub struct ProviderPackage {
     pub hostname: String,
     pub namespace: String,
@@ -73,7 +75,6 @@ impl ProviderPackage {
         self.version.clone().unwrap().num.to_string()
     }
 }
-
 
 #[derive(Deserialize, Debug)]
 pub struct RegistryVersion {
