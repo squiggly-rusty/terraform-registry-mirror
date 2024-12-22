@@ -12,13 +12,10 @@ use terraform_registry_mirror::{
     ProviderPackageVersion, RealProviderRegistry,
 };
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     // configure certificate and private key used by https
     let from_pem_file = RustlsConfig::from_pem_file(
