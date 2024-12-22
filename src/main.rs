@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
     extract::{Path, State},
@@ -16,7 +16,7 @@ use tracing::info;
 
 #[derive(Clone)]
 struct AppState {
-    storage_backend: LocalStorageBackend,
+    storage_backend: Arc<LocalStorageBackend>,
 }
 
 #[tokio::main]
@@ -39,7 +39,7 @@ async fn main() {
     let config = from_pem_file.await.unwrap();
 
     let state = AppState {
-        storage_backend: LocalStorageBackend::new(),
+        storage_backend: LocalStorageBackend::new().into(),
     };
     let app = Router::new()
         .route(
