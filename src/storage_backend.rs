@@ -50,6 +50,16 @@ impl StorageBackend for LocalStorageBackend {
         }
     }
     fn fetch_package(&self, package: &ProviderPackage) {
+        // FIXME: this is racy :)
+        if self
+            .packages_status
+            .get(package)
+            .filter(|status| matches!(**status, PackageStatus::Downloading))
+            .is_some()
+        {
+            return;
+        };
+
         // NOTE: this is ugly, is there any way to avoid this?
         let r = self.packages_status.clone();
         let pc = package.clone();
