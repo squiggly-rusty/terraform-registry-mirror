@@ -40,7 +40,8 @@ impl StorageBackend for LocalStorageBackend {
     }
     fn return_package_link(&self, package: &ProviderPackage) -> Option<String> {
         if self.check_package_available(package) {
-            if let PackageStatus::Ready(uri) = &(*self.packages_status.get(package).unwrap()) {
+            // NOTE: someone can (potentially) modify the package between the two if statements
+            if let PackageStatus::Ready(uri) = &(*self.packages_status.try_get(package).try_unwrap().unwrap()) {
                 Some(uri.clone())
             } else {
                 None
