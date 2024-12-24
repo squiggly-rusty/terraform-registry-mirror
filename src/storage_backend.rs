@@ -33,7 +33,8 @@ impl LocalStorageBackend {
 impl StorageBackend for LocalStorageBackend {
     fn check_package_available(&self, package: &ProviderPackage) -> bool {
         self.packages_status
-            .get(package)
+            .try_get(package)
+            .try_unwrap()
             .filter(|status| matches!(**status, PackageStatus::Ready(_)))
             .is_some()
     }
