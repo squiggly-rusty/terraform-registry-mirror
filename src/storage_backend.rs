@@ -50,25 +50,30 @@ impl StorageBackend for LocalStorageBackend {
         }
     }
     fn fetch_package(&self, package: &ProviderPackage) {
-        // FIXME: this is racy :)
-        if self
-            .packages_status
-            .get(package)
-            .filter(|status| matches!(**status, PackageStatus::Downloading))
-            .is_some()
-        {
-            return;
-        };
-
         // NOTE: this is ugly, is there any way to avoid this?
-        let r = self.packages_status.clone();
-        let pc = package.clone();
+        let pc = self.packages_status.clone();
+        let p = package.clone();
+
+        // NOTE: spawnine a new thread just to check the status seems, wasteful, but is there any way to do it otherwise? Rust borrow checker complains that data must have 'static lifetime. :shrug:
         tokio::spawn(async move {
-            r.insert(pc.clone(), PackageStatus::Downloading);
-            info!("fetching package...");
-            tokio::time::sleep(Duration::from_secs(5)).await;
-            r.alter(&pc, |_, _| PackageStatus::Ready("".to_string()));
-            info!("fetched package!");
+            // try to get an entry, if it's locked by someone, give up
+            match pc.try_entry(p) {
+                // we got exclusive access to the entry, do some stuff with it
+                Some(entry) => match entry {
+                    // there's no value yet, do some useful work here
+                    dashmap::Entry::Vacant(vacant) => {
+                        let mut r = vacant.insert(PackageStatus::Downloading);
+                        info!("fetching package...");
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        *r = PackageStatus::Ready("".to_string());
+                        info!("fetched package!");
+                    }
+                    // somebody already wrote to it, do nothing
+                    dashmap::Entry::Occupied(_) => (),
+                },
+                // entry is currently locked, nothing to do here
+                None => (),
+            };
         });
     }
 }
