@@ -41,7 +41,17 @@ async fn main() {
     let state = AppState {
         storage_backend: LocalStorageBackend::new(),
     };
-    let app = Router::new()
+    let app = app(state);
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    axum_server::bind_rustls(addr, config)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+fn app(state: AppState) -> Router {
+    Router::new()
         .route(
             "/:hostname/:namespace/:package_name/index.json",
             get(list_available_versions),
@@ -55,13 +65,7 @@ async fn main() {
             get(download_package),
         )
         .with_state(state)
-        .layer(TraceLayer::new_for_http());
-
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .layer(TraceLayer::new_for_http())
 }
 
 async fn list_available_versions(
@@ -118,5 +122,36 @@ async fn download_package(
             .await
             .unwrap()
             .into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{body::Body, http::{ Request, StatusCode }};
+    use http_body_util::BodyExt; use serde_json::{json, Value};
+    // for `collect`
+    use tower::util::ServiceExt; // for `call`, `oneshot`, and `ready`
+
+    use super::*;
+
+    #[tokio::test]
+    async fn list_available_versions() {
+        let state = AppState {
+            storage_backend: LocalStorageBackend::new(),
+        };
+        let app = app(state);
+
+        // `Router` implements `tower::Service<Request<Body>>` so we can
+        // call it like any tower service, no need to run an HTTP server.
+        let response = app
+            .oneshot(Request::builder().uri("/registry.terraform.io/hashicorp/aws/index.json").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body, json!({"versions":{"1.11.1":{}}}));
     }
 }
