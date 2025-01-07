@@ -5,11 +5,13 @@ use tracing::info;
 
 use crate::ProviderPackage;
 
+// NOTE: maybe it needs to take mut ref, maybe not
 pub trait StorageBackend {
-    fn check_package_available(&self, package: &ProviderPackage) -> bool;
+    fn is_available(&self, package: &ProviderPackage) -> bool;
     // This must likely live here, any implementation may require a different URL, but maybe not. TBD
-    fn return_package_link(&self, package: &ProviderPackage) -> Option<String>;
-    fn fetch_package(&self, package: &ProviderPackage);
+    // TODO: this must return something that implements IntoResponse
+    fn retrieve(&self, package: &ProviderPackage) -> Option<String>;
+    fn store(&self, package: &ProviderPackage);
 }
 
 enum PackageStatus {
@@ -31,15 +33,15 @@ impl LocalStorageBackend {
 }
 
 impl StorageBackend for LocalStorageBackend {
-    fn check_package_available(&self, package: &ProviderPackage) -> bool {
+    fn is_available(&self, package: &ProviderPackage) -> bool {
         self.packages_status
             .try_get(package)
             .try_unwrap()
             .filter(|status| matches!(**status, PackageStatus::Ready(_)))
             .is_some()
     }
-    fn return_package_link(&self, package: &ProviderPackage) -> Option<String> {
-        if self.check_package_available(package) {
+    fn retrieve(&self, package: &ProviderPackage) -> Option<String> {
+        if self.is_available(package) {
             // NOTE: someone can (potentially) modify the package between the two if statements
             if let PackageStatus::Ready(uri) =
                 &(*self.packages_status.try_get(package).try_unwrap().unwrap())
@@ -49,11 +51,11 @@ impl StorageBackend for LocalStorageBackend {
                 None
             }
         } else {
-            self.fetch_package(package);
+            self.store(package);
             None
         }
     }
-    fn fetch_package(&self, package: &ProviderPackage) {
+    fn store(&self, package: &ProviderPackage) {
         // NOTE: this is ugly, is there any way to avoid this?
         let pc = self.packages_status.clone();
         let p = package.clone();

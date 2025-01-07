@@ -108,7 +108,7 @@ async fn download_package(
     let package = ProviderPackage::with_version(&hostname, &namespace, &package_name, version);
 
     info!("in download_package!");
-    if let Some(uri) = state.storage_backend.return_package_link(&package) {
+    if let Some(uri) = state.storage_backend.retrieve(&package) {
         info!("package available, returning link from storage!");
         // TODO: or we can return back a file or start streaming here
         Redirect::temporary(&uri).into_response()
