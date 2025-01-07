@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use axum::response::Redirect;
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 mod storage_backend;
 pub use storage_backend::{LocalStorageBackend, StorageBackend};
@@ -111,6 +112,7 @@ fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVers
     }
 }
 
+#[async_trait]
 pub trait ProviderMirror {
     // FIXME: return type should not be limited only to reqwest::Error, but can be any error
     async fn list_versions(
@@ -127,6 +129,7 @@ pub trait ProviderMirror {
 #[derive(Clone)]
 pub struct RealProviderRegistry {}
 
+#[async_trait]
 impl ProviderMirror for RealProviderRegistry {
     // FIXME (Andriy): (how?) this is basically a DDoS generator
     // FIXME (Mattia): cache maybe

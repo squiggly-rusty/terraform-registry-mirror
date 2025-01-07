@@ -17,7 +17,7 @@ use tracing::info;
 #[derive(Clone)]
 struct AppState {
     storage_backend: LocalStorageBackend,
-    registry: RealProviderRegistry,
+    registry: Arc<dyn ProviderMirror>,
 }
 
 #[tokio::main]
@@ -132,14 +132,36 @@ mod tests {
     use http_body_util::BodyExt; use serde_json::{json, Value};
     // for `collect`
     use tower::util::ServiceExt; // for `call`, `oneshot`, and `ready`
+    use async_trait::async_trait;
 
     use super::*;
+
+    #[derive(Clone)]
+    struct MockRegistry {}
+
+    #[async_trait]
+    impl ProviderMirror for MockRegistry {
+        async fn list_versions(
+            &self,
+            package: &ProviderPackage,
+        ) -> Result<MirrorVersionsList, reqwest::Error> {
+            todo!()
+        }
+
+        async fn list_installation_packages(
+            &self,
+            package: &ProviderPackage,
+            version: &str,
+        ) -> Result<terraform_registry_mirror::AvailablePackages, reqwest::Error> {
+            todo!()
+        }
+    }
 
     #[tokio::test]
     async fn list_available_versions() {
         let state = AppState {
             storage_backend: LocalStorageBackend::new(),
-            registry: RealProviderRegistry {},
+            registry: Arc::new(MockRegistry {}),
         };
         let app = app(state);
 
