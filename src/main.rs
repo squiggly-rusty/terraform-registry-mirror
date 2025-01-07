@@ -17,6 +17,7 @@ use tracing::info;
 #[derive(Clone)]
 struct AppState {
     storage_backend: LocalStorageBackend,
+    registry: RealProviderRegistry,
 }
 
 #[tokio::main]
@@ -40,6 +41,7 @@ async fn main() {
 
     let state = AppState {
         storage_backend: LocalStorageBackend::new(),
+        registry: RealProviderRegistry {},
     };
     let app = app(state);
 
@@ -69,22 +71,21 @@ fn app(state: AppState) -> Router {
 }
 
 async fn list_available_versions(
+    State(state): State<AppState>,
     Path((hostname, namespace, package_name)): Path<(String, String, String)>,
 ) -> Json<MirrorVersionsList> {
-    let registry = RealProviderRegistry {};
     let package = ProviderPackage::new(&hostname, &namespace, &package_name);
-    return registry.list_versions(&package).await.unwrap().into();
+    return state.registry.list_versions(&package).await.unwrap().into();
 }
 
 async fn list_available_installation_packages(
+    State(state): State<AppState>,
     Path((hostname, namespace, package_name, version_part)): Path<(String, String, String, String)>,
 ) -> Response {
-    let registry = RealProviderRegistry {};
-
     if let Some(version) = version_part.strip_suffix(".json") {
         let package = ProviderPackage::new(&hostname, &namespace, &package_name);
         return Json(
-            registry
+            state.registry
                 .list_installation_packages(&package, version)
                 .await
                 .unwrap(),
@@ -138,6 +139,7 @@ mod tests {
     async fn list_available_versions() {
         let state = AppState {
             storage_backend: LocalStorageBackend::new(),
+            registry: RealProviderRegistry {},
         };
         let app = app(state);
 

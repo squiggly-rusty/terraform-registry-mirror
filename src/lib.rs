@@ -124,6 +124,7 @@ pub trait ProviderMirror {
     ) -> Result<AvailablePackages, reqwest::Error>;
 }
 
+#[derive(Clone)]
 pub struct RealProviderRegistry {}
 
 impl ProviderMirror for RealProviderRegistry {
