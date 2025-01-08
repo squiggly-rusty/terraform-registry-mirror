@@ -17,7 +17,7 @@ use tracing::info;
 #[derive(Clone)]
 struct AppState {
     storage_backend: LocalStorageBackend,
-    registry: Arc<dyn ProviderMirror>,
+    registry: Box<dyn ProviderMirror>,
 }
 
 #[tokio::main]
@@ -41,7 +41,7 @@ async fn main() {
 
     let state = AppState {
         storage_backend: LocalStorageBackend::new(),
-        registry: RealProviderRegistry {},
+        registry: Box::new(RealProviderRegistry {}),
     };
     let app = app(state);
 
@@ -161,7 +161,7 @@ mod tests {
     async fn list_available_versions() {
         let state = AppState {
             storage_backend: LocalStorageBackend::new(),
-            registry: Arc::new(MockRegistry {}),
+            registry: Box::new(MockRegistry {}),
         };
         let app = app(state);
 
