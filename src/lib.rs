@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use axum::response::Redirect;
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
+use dyn_clone::DynClone;
 
 mod storage_backend;
 pub use storage_backend::{LocalStorageBackend, StorageBackend};
@@ -113,7 +114,7 @@ fn transform_version_list(registry_versions: RegistryVersionsList) -> MirrorVers
 }
 
 #[async_trait]
-pub trait ProviderMirror {
+pub trait ProviderMirror: DynClone {
     // FIXME: return type should not be limited only to reqwest::Error, but can be any error
     async fn list_versions(
         &self,
@@ -125,6 +126,8 @@ pub trait ProviderMirror {
         version: &str,
     ) -> Result<AvailablePackages, reqwest::Error>;
 }
+
+dyn_clone::clone_trait_object!(ProviderMirror);
 
 #[derive(Clone)]
 pub struct RealProviderRegistry {}
